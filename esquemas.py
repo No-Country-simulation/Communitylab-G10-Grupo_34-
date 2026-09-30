@@ -1,34 +1,167 @@
-from pydantic import BaseModel, Field
-from typing import List, Optional
+from datetime import datetime, timezone
+from typing import Dict, List, Literal, Optional
+from pydantic import BaseModel, Field, field_validator
 
-# Contrato de Entrada
+
+# =====================================================================
+# Contrato 1: Ingesta (n8n / Webhook / carga manual -> API)
+# Validación en dos niveles: el sobre (IngestionLote) es permisivo para
+# no tumbar el lote completo por un registro malo; la validación estricta
+# de cada mensaje ocurre después, en InteraccionValidada.
+# =====================================================================
+
+
+class MetadataOrigen(BaseModel):
+    """Metadatos de origen para la capa de admisión (permisiva, fecha como string)."""
+    plataforma: str = Field(..., description="Plataforma de origen: Discord, Slack, Form, etc.")
+    identificador_original: str = Field(..., description="ID nativo del mensaje en la plataforma")
+    fecha: str = Field(..., description="Timestamp ISO-8601 del mensaje original")
+
+
+class MetadataOrigenValidado(BaseModel):
+    """Metadatos de origen validados para el pipeline interno (fecha parseada a datetime)."""
+    plataforma: str = Field(..., description="Plataforma de origen: Discord, Slack, Form, etc.")
+    identificador_original: str = Field(..., description="ID nativo del mensaje en la plataforma")
+    fecha: datetime = Field(..., description="Timestamp parseado y validado como datetime")
+
+
 class Interaccion(BaseModel):
+    id: str
+    autor: str = Field(default="Anónimo", description="Nombre o alias del miembro comunitario")
+    canal: str
+    tipo: str = Field(default="sin_clasificar")  # Si falta, asigna valor por defecto
+    texto: Optional[str] = Field(default="", description="Puede venir vacío en pruebas de fallo")
+    metadata_origen: MetadataOrigen
+
+
+class IngestionLote(BaseModel):
+    schema_version: str = Field(default="1.1.0")
+    request_id: str = Field(..., description="Identificador de la solicitud provisto por el emisor (n8n)")
+    origen_comunidad: str
+    periodo_referencia: str
+    interacciones: List[Interaccion] = Field(..., min_length=1)
+
+
+class InteraccionValidada(BaseModel):
+    """Segunda capa: aplicada por el proceso local antes de pasar el mensaje a los agentes de IA."""
+
     id: str
     autor: str
     canal: str
-    tipo: str = Field(default="sin_clasificar") # Si falta, asigna valor por defecto
-    texto: str
+    tipo: str
+    texto: str = Field(..., min_length=1, description="Texto no vacío exigido para análisis")
+    metadata_origen: MetadataOrigenValidado
 
-class IngestionLote(BaseModel):
-    origen_comunidad: str
-    periodo_referencia: str
-    interacciones: List[Interaccion]
+    @field_validator("texto")
+    @classmethod
+    def validar_texto_no_vacio(cls, v: str) -> str:
+        if not v or not v.strip():
+            raise ValueError("El texto de la interacción no puede estar vacío ni contener solo espacios")
+        return v.strip()
 
-# --- Contrado de Salida
+
+# =====================================================================
+# Contrato 2: Análisis Cognitivo (salida del LLM sobre registros válidos)
+# =====================================================================
+
+
+class PuntuacionRelevancia(BaseModel):
+    evidencia_explicita: int = Field(..., ge=0, le=2)
+    utilidad_comunitaria: int = Field(..., ge=0, le=2)
+    claridad_contexto: int = Field(..., ge=0, le=2)
+    total: int = Field(..., ge=0, le=6)
+
+
+class MensajeAnalizado(BaseModel):
+    source_id: str = Field(..., description="Referencia exacta al id del mensaje")
+    sentimiento: Literal["Altamente Positivo", "Positivo", "Neutro", "Dificultad/Negativo"]
+    categoria_enrutamiento: Literal["Logro", "Duda", "Dificultad"]
+    regla_aplicada: str = Field(..., description="Criterio documentado para derivar el contenido")
+    temas: List[str] = Field(..., min_length=1)
+    entidades_relevantes: List[str] = Field(default_factory=list)
+    puntuacion_relevancia: PuntuacionRelevancia
+    motivo_seleccion: str = Field(..., min_length=10, description="Justificación objetiva de la puntuación")
+    requiere_soporte: bool = Field(default=False, description="Marca casos que requieren canalización o mentoría")
+    apto_para_publicacion: bool = Field(..., description="Determina si el mensaje califica para difusión pública")
+
+
+class ResumenComunidad(BaseModel):
+    total_interacciones_procesadas: int = Field(..., ge=1)
+    registros_validos: int = Field(..., ge=1)
+    registros_rechazados: int = Field(default=0, ge=0)
+    sentimiento_predominante: str = Field(..., description="Polaridad dominante o 'Mixto'")
+    distribucion_sentimiento: Dict[str, int]
+    temas_principales: List[str] = Field(..., min_length=1)
+    alertas_soporte: List[str] = Field(default_factory=list)
+
+
+class AnalisisCognitivo(BaseModel):
+    run_id: str = Field(..., description="ID de ejecución asignado por la API")
+    request_id: str = Field(..., description="ID de la solicitud original")
+    resumen_comunidad: ResumenComunidad
+    mensajes_analizados: List[MensajeAnalizado] = Field(..., min_length=1)
+
+
+# =====================================================================
+# Contrato 3: Distribución, curaduría y persistencia OCI
+# =====================================================================
+
+
+class PostLinkedIn(BaseModel):
+    titulo: str = Field(..., min_length=5)
+    canal_recomendado: str = Field(default="LinkedIn Oficial")
+    cuerpo: str = Field(..., min_length=20)
+    hashtags: List[str] = Field(default_factory=list)
+    source_ids: List[str] = Field(..., min_length=1, description="IDs de mensajes que respaldan la publicación")
+
+
+class ResumenSemanal(BaseModel):
+    seccion: str
+    titular: str = Field(..., min_length=5)
+    resumen: str = Field(..., min_length=20)
+    source_ids: List[str] = Field(..., min_length=1, description="IDs de mensajes que respaldan la síntesis")
+
+
 class ActivosGenerados(BaseModel):
-    post_linkedin: str
-    resumen_semanal: str
+    post_linkedin: PostLinkedIn
+    resumen_semanal: ResumenSemanal
+
+
+class MetadatosEjecucion(BaseModel):
+    modelo: str = Field(..., description="Identificador exacto del LLM")
+    prompt_version: str = Field(..., description="Versión del prompt utilizado")
+    latencia_ms: int = Field(..., ge=0)
+    tokens_totales: int = Field(..., ge=0)
+
 
 class EstadoRevision(BaseModel):
-    estado: str = "pendiente" # pendiente | aprobado | rechazado
-    revisor: Optional[str] = None
-    version_revision: str = "revision-001"
+    numero_revision: int = Field(default=1, ge=1, description="Secuencia incremental de versión")
+    estado: Literal["pendiente", "aprobado", "rechazado"] = "pendiente"
+    revisor: Optional[str] = Field(default=None, description="Alias o identificador del curador humano")
+    fecha_decision: Optional[datetime] = None
+    comentarios: Optional[str] = None
+
+
+class EvidenciaAlmacenamientoOCI(BaseModel):
+    bucket: str = Field(default="communitylab-activos-marketing")
+    ruta_objeto: str = Field(..., description="Ruta inmutable: activos/{periodo}/{run_id}/revision-{num}.json")
+    status_almacenamiento: Literal["guardado_con_exito", "guardado_error", "no_iniciado"] = "no_iniciado"
+    comprobacion_lectura: bool = Field(
+        default=False, description="True solo si la aplicación recuperó y verificó el objeto en OCI"
+    )
+
+
+def fecha_utc_ahora() -> datetime:
+    return datetime.now(timezone.utc)
+
 
 class PaqueteSalida(BaseModel):
-    schema_version: str = "1.1"
+    schema_version: str = "1.1.0"
     run_id: str
-    fecha: str
-    analisis_sentimiento: str
+    request_id: str
+    fecha_generacion: datetime = Field(default_factory=fecha_utc_ahora)
+    metadatos_ejecucion: MetadatosEjecucion
+    analisis_resumido: ResumenComunidad
     activos: ActivosGenerados
-    revision: EstadoRevision
-    estado_almacenamiento_oci: str = "no_guardado"
+    revision: EstadoRevision = Field(default_factory=EstadoRevision)
+    almacenamiento_oci: EvidenciaAlmacenamientoOCI
