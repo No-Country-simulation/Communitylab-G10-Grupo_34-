@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 from typing import Dict, List, Literal, Optional
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 
 # =====================================================================
@@ -69,7 +69,12 @@ class PuntuacionRelevancia(BaseModel):
     evidencia_explicita: int = Field(..., ge=0, le=2)
     utilidad_comunitaria: int = Field(..., ge=0, le=2)
     claridad_contexto: int = Field(..., ge=0, le=2)
-    total: int = Field(..., ge=0, le=6)
+    total: int = Field(default=0, ge=0, le=6)
+
+    @model_validator(mode="after")
+    def calcular_total(self):
+        self.total = self.evidencia_explicita + self.utilidad_comunitaria + self.claridad_contexto
+        return self
 
 
 class MensajeAnalizado(BaseModel):
