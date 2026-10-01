@@ -132,7 +132,39 @@ El equipo estandarizó **Python 3.11** y **[uv](https://docs.astral.sh/uv/)** co
 
 ## 🖥️ Panel de curaduría (`ui/`)
 
-Interfaz Streamlit que cubre el requisito de UI del hackathon: cargar interacciones, revisar el análisis, editar/aprobar los dos formatos de contenido y comprobar el estado de almacenamiento — en cuatro pasos (**Carga → Resultados → Edición y aprobación → Almacenamiento**), sobre el diseño aprobado por el equipo (verde petróleo `#00676B`, ver `entrega-claude-code/referencia/diseno-aprobado.png` para la referencia visual original).
+Interfaz Streamlit que cubre el requisito de UI del hackathon y la historia de usuario **[HU-S1-004 — Flujo de revisión humana](https://github.com/No-Country-simulation/Communitylab-G10-Grupo_34-/issues/8)**: cargar interacciones, revisar el análisis, editar/aprobar/rechazar los dos formatos de contenido y comprobar el estado de almacenamiento — en cuatro pasos (**Carga → Resultados → Edición y aprobación → Almacenamiento**), sobre el diseño aprobado por el equipo (verde petróleo `#00676B`, texto `#122039`/`#52627B`).
+
+Diseño aprobado por el equipo (mockup de referencia) frente a la implementación real:
+
+| Mockup aprobado | Implementación (pantalla "Resultados") |
+| :---: | :---: |
+| <img src="docs/screenshots/00-mockup-aprobado.png" width="420" alt="Mockup aprobado de la pantalla Resultados"> | <img src="docs/screenshots/04-resultados.png" width="420" alt="Pantalla Resultados implementada"> |
+
+### Recorrido completo, paso a paso
+
+**1. Carga** — se sube un lote JSON o se usa el de ejemplo (`data/raw/lote_prueba_01.json`, 4 registros: 3 válidos + 1 vacío). El resumen muestra de inmediato cuántos se recibieron, validaron y rechazaron, con el motivo de cada rechazo.
+
+<img src="docs/screenshots/02-carga-cargada.png" width="760" alt="Pantalla de carga con el lote de ejemplo validado: 4 recibidos, 3 válidos, 1 rechazado">
+
+**2. Resultados** — análisis por mensaje (sentimiento, categoría, relevancia 0-6 y justificación), con filtro por categoría y el texto original siempre visible junto a la clasificación.
+
+<img src="docs/screenshots/04-resultados.png" width="760" alt="Pantalla de resultados con el análisis por mensaje">
+
+**3. Edición y aprobación** — editor con vista previa en vivo para el post de LinkedIn y el resumen semanal, cada uno con sus mensajes fuente consultables (trazabilidad de `source_ids`).
+
+<img src="docs/screenshots/06-edicion-borradores.png" width="760" alt="Pantalla de edición con el post de LinkedIn y su vista previa">
+
+El sistema exige nombre de revisor para cualquier decisión, y un motivo obligatorio para rechazar. Rechazar incrementa el número de revisión y vuelve el contenido a estado pendiente:
+
+<img src="docs/screenshots/07-rechazo.png" width="760" alt="Evidencia del flujo de rechazo con motivo obligatorio y la revisión marcada como Rechazado">
+
+**4. Almacenamiento** — al aprobar, el panel avanza automáticamente a este paso. Guarda el paquete y **comprueba activamente la lectura posterior** antes de marcarlo como verificado; es honesto sobre que es una copia local, no OCI real:
+
+<img src="docs/screenshots/09-almacenamiento-verificado.png" width="760" alt="Copia local guardada y verificada, con status_almacenamiento en no_iniciado para OCI">
+
+Más capturas (incluida la pantalla inicial vacía y el estado post-aprobación) en [`docs/screenshots/`](docs/screenshots/).
+
+### Archivos
 
 - `ui/app.py` — navegación y presentación; consume directamente `esquemas.py` y `validador.py`, sin lógica de negocio propia.
 - `ui/mock_pipeline.py` — clasificación y generación de copy **heurísticas**, no IA real. Es un reemplazo temporal de `ai_modules/` mientras ese módulo no exista.

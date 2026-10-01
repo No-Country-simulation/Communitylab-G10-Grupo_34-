@@ -1,6 +1,8 @@
 # CommunityLab: panel de curaduría
 
-Diseño aprobado: variante clara con acento verde petróleo, navegación en cuatro pasos y mensajes originales junto al análisis. Referencia visual: `entrega-claude-code/referencia/diseno-aprobado.png`. Logo oficial integrado en la barra lateral desde `ui/assets/communitylab-logo.png`.
+Diseño aprobado: variante clara con acento verde petróleo, navegación en cuatro pasos y mensajes originales junto al análisis. Referencia visual: [`docs/screenshots/00-mockup-aprobado.png`](../docs/screenshots/00-mockup-aprobado.png). Logo oficial integrado en la barra lateral desde `ui/assets/communitylab-logo.png`.
+
+Capturas de las 4 pantallas (carga, resultados, edición/aprobación con el camino de rechazo, almacenamiento) en [`docs/screenshots/`](../docs/screenshots/) y en el [README principal](../README.md) (sección "Panel de curaduría").
 
 ## Ejecutar
 
@@ -29,6 +31,6 @@ La descarga de borradores incluye los textos actuales aunque todavía no se haya
 
 ## Verificación
 
-**30 de septiembre de 2026:** las 4 pruebas pasan con el `.venv` del proyecto (Python 3.11.16, `uv venv --python 3.11`) usando las versiones exactas fijadas en `requirements.txt` (Streamlit 1.38.0, Pydantic 2.8.2). Recorrido manual de las 4 pantallas en navegador con el lote de ejemplo: carga (4/3/1), análisis, edición con validación de campos obligatorios, aprobación, guardado local verificado. Se comparó la pantalla de Resultados contra `entrega-claude-code/referencia/diseno-aprobado.png`: coincide en layout, badges y estadísticas; solo difiere el texto de justificación porque proviene de `mock_pipeline.py` (heurística local), no de un LLM real. Probado también en ancho móvil (375px): las columnas se apilan correctamente.
+**30 de septiembre de 2026:** las 4 pruebas pasan con el `.venv` del proyecto (Python 3.11.16, `uv venv --python 3.11`) usando las versiones exactas fijadas en `requirements.txt` (Streamlit 1.38.0, Pydantic 2.8.2). Recorrido manual de las 4 pantallas en navegador con el lote de ejemplo: carga (4/3/1), análisis, edición con validación de campos obligatorios, aprobación, guardado local verificado. Se comparó la pantalla de Resultados contra el mockup aprobado (`docs/screenshots/00-mockup-aprobado.png`): coincide en layout, badges y estadísticas; solo difiere el texto de justificación porque proviene de `mock_pipeline.py` (heurística local), no de un LLM real. Probado también en ancho móvil (375px): las columnas se apilan correctamente.
 
 *Nota histórica (29 de septiembre de 2026):* una verificación anterior reportó el `.venv` como roto y usó Python 3.12.3 de Anaconda en su lugar. Eso era incorrecto o quedó desactualizado — el `.venv` del proyecto funciona correctamente y es el que debe usarse.
