@@ -85,36 +85,6 @@ flowchart LR
 ```
 ### Recorrido Operativo de los Datos
 
-[n8n / Webhook / Carga Manual]
-            │
-            ▼
-┌───────────────────────────────┐
-│     FastAPI Ingestion API     │ ──> Guarda atómicamente en `data/raw/`
-└───────────────────────────────┘
-            │
-            ▼
-┌───────────────────────────────┐
-│      Validador Local          │ ──> Aplica `InteraccionValidada`
-└───────────────┬───────────────┘
-                │
-        ┌───────┴───────┐
-        ▼               ▼
-┌───────────────┐ ┌──────────────────────────┐
-│   3 Válidos   │ │ 1 Rechazado (Sin Texto)  │
-│  Agentes LLM  │ │  Tabla Auditoría Local   │
-└───────┬───────┘ └──────────────────────────┘
-        │
-        ▼
-┌───────────────────────────────┐
-│     Generación de Activos     │ ──> LinkedIn + Resumen Semanal (`source_ids`)
-└───────────────┬───────────────┘
-                │
-        ┌───────┴────────────────────────┐
-        ▼                                ▼
-┌───────────────────────────────┐ ┌─────────────────────────────────┐
-│  Borrador `revision-001.json` │ │    Panel Streamlit (Curaduría)   │
-│   OCI Object Storage (Sync)   │ │  Aprobación -> `revision-002`   │
-└───────────────────────────────┘ └─────────────────────────────────┘
 
 1. **Ingesta:** Los eventos de chat se capturan y normalizan vía n8n, enviando una petición HTTP autenticada a FastAPI. La API valida la firma compartida (`X-Webhook-Secret`), verifica idempotencia mediante hash SHA-256 y almacena atómicamente el lote en `data/raw/{run_id}.json`.
 2. **Validación:** El módulo `data_pipeline/validador.py` examina cada registro. Si un mensaje carece de texto, se desvía a la tabla de auditoría en SQLite; los registros válidos avanzan como `InteraccionValidada`.
@@ -192,6 +162,9 @@ Communitylab-G10-Grupo_34-/
 | Cliente OCI Object Storage real | `storage/oci_client.py` | ⏳ Pendiente (`ui/storage_demo.py` simula solo en disco local mientras tanto) |
 | API de ingesta (FastAPI) | `api/` | ⏳ Pendiente |
 
+  ```
+  ---
+
 ## ⚡ Guía de Inicio Rápido (Quickstart)
 
 ### 1. Prerrequisitos
@@ -202,6 +175,7 @@ El proyecto requiere **Python 3.11** y **[uv](https://docs.astral.sh/uv/)**. Si 
   ```powershell
   powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
   ```
+
 - **macOS / Linux:**
   ```bash
   curl -LsSf https://astral.sh/uv/install.sh | sh
@@ -265,11 +239,10 @@ Diseñado para someter a prueba los cuatro escenarios canónicos exigidos por la
 
 ### Resultados de Ejecución Automática
 
-### 2. Resultados de la suite de pruebas
 
-Comando ejecutado local:
+Comando ejecutado:
 ```bash
-python -m pytest tests/ -v
+uv run pytest
 ```
 
 **Salida de consola obtenida (4 pruebas, todas en verde):**
@@ -280,9 +253,6 @@ tests/test_primera_prueba.py::test_validacion_lote_prueba_01 PASSED
 tests/test_primera_prueba.py::test_contrato_paquete_distribucion_generado PASSED
 ```
 
-Comando ejecutado con `uv`:
-```bash
-uv run pytest
 ```
 
 Salida de la suite:
@@ -300,60 +270,17 @@ tests\test_primera_prueba.py ..                                          [100%]
 
 ====================== 20 passed, 1 deselected in 2.69s =======================
 ```
-```
-
 ### Matriz de Criterios de Aceptación Superados
 
-| Criterio | Resultado Esperado | Evidencia Técnica / Detalle | Estado |
+| Criterio Arquitectónico | Resultado Esperado | Evidencia Técnica | Estado |
 | :--- | :--- | :--- | :---: |
-| **Transporte y Validación** | 4 recibidos, 3 válidos a IA, 1 rechazado (`msg_004`) aislado en auditoría sin tumbar el lote | Sobre `IngestionLote` procesa el lote de 4 elementos sin descartarlo y `data_pipeline/validador.py` deriva el vacío a auditoría | ✅ Superado |
-| **Aislamiento en Dos Capas** | 3 válidos a IA y 1 rechazado a auditoría | `data_pipeline/validador.py` emite 3 `InteraccionValidada` y 1 descarte en SQLite | ✅ Superado |
-| **Trazabilidad estricta** | Activos generados enlazan a `source_ids` sin inventar hechos | `PostLinkedIn` y `ResumenSemanal` contienen `source_ids` verificables (`msg_001`, `msg_002`, `msg_003`) | ✅ Superado |
-| **Contrato Canónico** | Estructura 100% compatible con `PaqueteSalida` y `EvidenciaAlmacenamientoOCI` | Cumplimiento estricto del paquete consolidado con validación del contrato | ✅ Superado |
-| **Flujo de curaduría end-to-end** | Carga → análisis → edición/aprobación → guardado local verificado, con validación de campos e invalidación al editar contenido aprobado | `tests/test_frontend.py` cubre revisión, edición, invalidación y estado de almacenamiento | ✅ Superado |
+| **Transporte e Ingesta** | Admisión sin caída ante registros vacíos | Sobre `IngestionLote` procesa el lote de 4 elementos sin descartarlo | ✅ Superado |
+| **Aislamiento en Dos Capas** | 3 válidos a IA y 1 rechazado a auditoría | `data_pipeline/validador.py` deriva `msg_004` a auditoría y emite 3 `InteraccionValidada` | ✅ Superado |
+| **Trazabilidad Factual** | Cero hechos inventados en copys generados | `PostLinkedIn` y `ResumenSemanal` contienen `source_ids` verificables (`msg_001`, `msg_002`, `msg_003`) | ✅ Superado |
+| **Contrato Canónico** | Cumplimiento estricto del paquete consolidado | Estructura 100% compatible con `PaqueteSalida` y `EvidenciaAlmacenamientoOCI` | ✅ Superado |
 | **Persistencia Cloud Segura** | Resiliencia en operaciones con el SDK de OCI | 18 pruebas unitarias con mock y verificación activa de lectura | ✅ Superado |
 
----
 
-## 📚 Documentación Detallada del MVP
-
-El equipo estandarizó **Python 3.11** y **[uv](https://docs.astral.sh/uv/)** como gestor de entorno/paquetes.
-
-1. **Clonar el repositorio y entrar al directorio:**
-   ```bash
-   git clone https://github.com/No-Country-simulation/Communitylab-G10-Grupo_34-.git
-   cd Communitylab-G10-Grupo_34-
-   ```
-
-2. **Crear el entorno virtual con Python 3.11 (uv lo descarga si no lo tienes):**
-   ```bash
-   uv python install 3.11
-   uv venv --python 3.11
-   # Activar en Windows:
-   .venv\Scripts\activate
-   ```
-
-3. **Instalar dependencias:**
-   ```bash
-   uv pip install -r requirements.txt
-   ```
-
-4. **Configurar variables de entorno:**
-   ```bash
-   cp .env.example .env
-   # Completar credenciales de OCI y del LLM en .env (nunca subir este archivo)
-   ```
-
-5. **Ejecutar la suite de pruebas:**
-   ```bash
-   python -m pytest tests/ -v
-   ```
-
-6. **Levantar el panel de curaduría (Streamlit):**
-   ```bash
-   python -m streamlit run ui/app.py
-   ```
-   Se abre en `http://localhost:8501`. Incluye un lote de ejemplo (`data/raw/lote_prueba_01.json`, botón "Probar con datos de ejemplo") para recorrer el flujo completo sin depender de canales reales.
 
 ---
 
@@ -402,6 +329,7 @@ Más capturas (incluida la pantalla inicial vacía y el estado post-aprobación)
 **Pendiente antes de conectar con servicios reales:** reemplazar `ui/mock_pipeline.py` por los módulos reales de `ai_modules/`, y `ui/storage_demo.py` por `storage/oci_client.py`, sin cambiar los contratos de `esquemas.py` sin acuerdo previo del equipo.
 
 ---
+## 📚 Documentación Detallada del MVP
 
 Para profundizar en el diseño, contratos canónicos y normas de trabajo del equipo, consulta los documentos de referencia:
 
