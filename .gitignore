@@ -3,6 +3,12 @@ __pycache__/
 *.py[codz]
 *$py.class
 
+# Simulación local de OCI mientras storage/oci_client.py no existe (ui/storage_demo.py)
+data/oci_sim/
+
+# Config de lanzamiento local del dev server (rutas absolutas por máquina)
+.claude/launch.json
+
 # C extensions
 *.so
 

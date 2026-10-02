@@ -1,0 +1,35 @@
+:root { --brand: #00676b; --ink: #122039; --muted: #52627b; }
+.stApp { background: #ffffff; color: var(--ink); }
+.block-container { max-width: 1400px; padding: 4.5rem 3.2rem 3rem; }
+[data-testid="stSidebar"] { background: #f5f8f8; border-right: 1px solid #e3e9eb; }
+[data-testid="stSidebar"] .block-container { padding: 2rem 1rem; }
+h1 { font-size: 2.65rem !important; letter-spacing: -.035em; font-weight: 750 !important; padding-top: 1.4rem !important; }
+h2,h3 { letter-spacing: -.02em; color: var(--ink); }
+p, label, .stMarkdown { line-height: 1.6; }
+.subtitle { font-size: 1.13rem; color: var(--muted); margin-bottom: 2rem; }
+.mode { text-align: right; color: #00676b; font-size: .85rem; }
+.stat { display: flex; align-items: center; gap: 1rem; padding: 1.2rem 0; }
+.stat strong { font-size: 2.6rem; color: var(--brand); line-height: 1; }
+.stat span { font-size: 1rem; color: var(--ink); }
+.badge { display: inline-block; padding: .2rem .85rem; border-radius: 20px; font-size: .9rem; margin: .35rem 0; }
+.achievement { background: #d9f5e5; color: #075c38; }
+.question { background: #e0f0ff; color: #145b8d; }
+.difficulty { background: #fff0d7; color: #805016; }
+.nav-space { height: 2rem; }
+div.stButton > button { border-radius: 7px; min-height: 2.75rem; border-color: #aebdc6; color: var(--ink); }
+div.stButton > button[kind="primary"] { background: var(--brand); border-color: var(--brand); color: white; }
+div.stButton > button:hover { border-color: var(--brand); color: var(--brand); }
+div.stButton > button[kind="primary"]:hover { background: #005256; color: white; }
+div.stButton > button:focus-visible { outline: 3px solid #30a6a4; outline-offset: 3px; }
+[data-testid="stSidebar"] div.stButton > button { justify-content: flex-start; text-align: left; }
+[data-testid="stSidebar"] div.stButton > button[kind="secondary"] { background: transparent; border-color: transparent; }
+[data-testid="stSidebar"] div.stButton > button[kind="primary"] { background: #e3f0ef; color: #005b60; border-color: transparent; }
+[data-testid="stCaptionContainer"] { color: var(--muted); }
+hr { border-color: #e1e8ec; }
+@media (max-width: 800px) {
+ .block-container { padding: 4rem 1rem 2rem; }
+ h1 { font-size: 2rem !important; }
+ .stat { gap: .5rem; }
+ .stat strong { font-size: 2rem; }
+ .mode { text-align: left; }
+}
