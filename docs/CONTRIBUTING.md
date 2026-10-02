@@ -60,7 +60,7 @@ Si Git marca un conflicto (`CONFLICT` en la terminal), **no lo resuelvas solo/a 
 Es la única fuente de verdad de los contratos de datos. Ningún cambio se sube sin acuerdo previo del equipo:
 
 1. Proponé el cambio en el canal (o como PR de discusión, sin fusionar).
-2. Esperá el visto bueno del grupo responsable de revisión, que serian: Michael, Sergio y Andrea. (Propuesto por Michael en el canal de Discord).
+2. Esperá el visto bueno del grupo responsable de la revisión de `esquemas.py` (ver la tabla de responsabilidades del equipo).
 3. Recién ahí se fusiona a `main`, y el resto actualiza su rama local (`git pull origin main`) antes de seguir trabajando sobre los contratos.
 
 ## 4. Convenciones ya acordadas (para no reabrir la discusión)
