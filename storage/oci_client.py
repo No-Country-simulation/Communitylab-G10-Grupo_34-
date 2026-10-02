@@ -181,6 +181,13 @@ class OCIStorageClient:
         perfil DEFAULT personal no reemplace en silencio las credenciales
         de servicio del equipo."""
         resolved_config: dict[str, Any] | None = None
+        # Si OCI_USER_OCID está definido, hay una intención EXPLÍCITA de usar
+        # las credenciales de servicio vía variables de entorno. En ese caso,
+        # un problema con la clave (faltante/ilegible) debe tratarse como un
+        # error duro — nunca como una señal para caer en silencio al perfil
+        # personal de ~/.oci/config, que es justo lo que esta precedencia
+        # busca evitar.
+        permitir_fallback_archivo = not self.config.user_ocid
 
         # 1. Variables de entorno primero (credenciales de servicio compartidas)
         if self.config.user_ocid:
@@ -201,11 +208,20 @@ class OCIStorageClient:
                 )
             else:
                 self._log.error(
-                    "oci_key_file_not_found", path=self.config.key_file_path
+                    "oci_key_file_not_found",
+                    path=self.config.key_file_path,
+                    detalle=(
+                        "OCI_USER_OCID está definido pero la clave no es "
+                        "válida; no se intentará ~/.oci/config como respaldo "
+                        "para no autenticar en silencio con un perfil distinto "
+                        "al de servicio. Corrija OCI_KEY_FILE."
+                    ),
                 )
 
-        # 2. Archivo de configuración como respaldo (uso individual / desarrollo local)
-        if not resolved_config:
+        # 2. Archivo de configuración como respaldo — SOLO si no hubo
+        # intención explícita de usar variables de entorno (OCI_USER_OCID
+        # ausente). Si estaba definido pero falló, no se cae hasta acá.
+        if not resolved_config and permitir_fallback_archivo:
             target_cfg_path = self.config.config_file_path or os.path.expanduser(
                 "~/.oci/config"
             )
@@ -568,6 +584,7 @@ class OCIStorageClient:
                 namespace_name=self._namespace,
                 bucket_name=self.config.bucket_name,
                 object_name=ruta_objeto,
+                retry_strategy=oci.retry.DEFAULT_RETRY_STRATEGY,
             )
             hash_existente = self.calculate_sha256(existing.data.content)
         except Exception as e:

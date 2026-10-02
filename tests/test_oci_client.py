@@ -248,6 +248,38 @@ def test_env_vars_tienen_prioridad_sobre_config_file(monkeypatch, tmp_path):
     assert capturado["config"]["user"] == "ocid1.user.oc1..servicio"
 
 
+def test_env_ocid_con_key_file_invalido_no_cae_a_config_personal(monkeypatch, tmp_path):
+    """Si OCI_USER_OCID está definido pero OCI_KEY_FILE no apunta a un
+    archivo válido, el cliente NO debe caer en silencio a ~/.oci/config
+    aunque ese archivo exista y sea válido — debe quedar sin credenciales
+    (comentario de revisión de Roberto en el PR #14)."""
+    fake_home_config = tmp_path / "oci_config"
+    fake_home_config.write_text("[DEFAULT]\nuser=ocid1.user.oc1..personal\n")
+
+    monkeypatch.setenv("OCI_USER_OCID", "ocid1.user.oc1..servicio")
+    monkeypatch.setenv("OCI_KEY_FILE", str(tmp_path / "no_existe.pem"))  # clave inválida a propósito
+    monkeypatch.setenv("OCI_FINGERPRINT", "aa:bb")
+    monkeypatch.setenv("OCI_TENANCY_OCID", "ocid1.tenancy.oc1..x")
+    monkeypatch.setenv("OCI_REGION", "mx-queretaro-1")
+    monkeypatch.setenv("OCI_CONFIG_FILE", str(fake_home_config))
+
+    import oci as oci_module
+
+    monkeypatch.setattr(
+        oci_module.config,
+        "from_file",
+        lambda **_k: pytest.fail(
+            "no debió leer ningún archivo de config: OCI_USER_OCID estaba "
+            "definido con una clave inválida, no debe haber fallback"
+        ),
+    )
+
+    cfg = OCIConfig.from_env()
+    cliente = OCIStorageClient(cfg)
+
+    assert cliente._client is None  # sin credenciales válidas, no un perfil ajeno
+
+
 # --- integración real (omitida por defecto, ver pyproject.toml) -----------
 
 
