@@ -737,6 +737,11 @@ class OCIStorageClient:
 
 
 if __name__ == "__main__":
+    if hasattr(sys.stdout, "reconfigure"):
+        try:
+            sys.stdout.reconfigure(encoding="utf-8")
+        except Exception:
+            pass
     configure_logging()
     print("=" * 70)
     print(" COMMUNITYLAB - DIAGNÓSTICO DE OCI OBJECT STORAGE (ALWAYS FREE)")
