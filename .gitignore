@@ -222,3 +222,8 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+/secrets
+*.pem
+data/raw/gitkeep
+/data/raw
+/.vscode
