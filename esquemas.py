@@ -122,9 +122,19 @@ class ResumenSemanal(BaseModel):
     source_ids: List[str] = Field(..., min_length=1, description="IDs de mensajes que respaldan la síntesis")
 
 
+class CasoNoPublicable(BaseModel):
+    source_id: str
+    sentimiento: str
+    categoria_enrutamiento: str
+    temas: list[str]
+    requiere_soporte: bool
+    motivo_seleccion: str
+
+
 class ActivosGenerados(BaseModel):
     post_linkedin: PostLinkedIn
     resumen_semanal: ResumenSemanal
+    casos_no_publicables: list[CasoNoPublicable] = Field(default_factory=list)
 
 
 class MetadatosEjecucion(BaseModel):
