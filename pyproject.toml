@@ -1,0 +1,55 @@
+[project]
+name = "communitylab"
+version = "0.1.0"
+description = "Motor Inteligente de Transformación y Distribución para Comunidades Digitales — Hackathon ONE G10"
+requires-python = "==3.11.*"
+dependencies = [
+    # Backend / API
+    "fastapi>=0.140,<0.141",
+    "uvicorn[standard]>=0.30",
+    "python-dotenv>=1.0,<2.0",
+
+    # Agente / orquestación
+    "pydantic-ai>=2.33,<3.0",
+    "langgraph>=1.2,<1.3",
+
+    # Interfaz de curaduría
+    "streamlit>=1.63,<1.64",
+
+    # Oracle Cloud Infrastructure (Object Storage)
+    "oci>=2.185,<3.0",
+
+    # Logging estructurado (JSON) y trazabilidad contextual
+    "structlog>=26.1,<27",
+]
+
+[tool.uv]
+required-version = ">=0.5"
+# Proyecto de aplicación (monorepo plano): uv instala solo las dependencias y
+# no intenta construir/instalar el propio proyecto como paquete.
+package = false
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1,<10",
+    "ruff>=0.15,<1.0",
+]
+
+[tool.ruff.lint.per-file-ignores]
+# storage/oci_client.py atrapa Exception de forma amplia a propósito en sus
+# fronteras con el SDK de OCI (red, serialización): es resiliencia operativa
+# deliberada (degradar sin tumbar el lote), no manejo de errores descuidado.
+"storage/oci_client.py" = ["BLE001"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]  # permite `import storage...`, `import esquemas` desde la raíz
+addopts = "-ra -m 'not integration'"
+markers = [
+    "integration: pruebas contra OCI real (requieren credenciales; usar -m integration)",
+]
+
+[tool.pyright]
+venvPath = "."
+venv = ".venv"
+
