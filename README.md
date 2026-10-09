@@ -1,44 +1,152 @@
 # CommunityLab — Equipo 34 (Hackathon ONE G10 / NoCountry)
 > **Motor Inteligente de Transformación y Distribución para Comunidades Digitales**
 
-Solución automatizada orientada a comunidades de aprendizaje, ecosistemas de desarrolladores y empresas SaaS para ingerir actividad orgánica (Discord, Slack, GitHub, Foros) y transformarla sistemáticamente en activos de marketing estructurados y persistidos en **Oracle Cloud Infrastructure (OCI Always Free)**.
+[![Python 3.11](https://img.shields.io/badge/Python-3.11-3776AB?style=flat&logo=python&logoColor=white)](https://www.python.org/)
+[![Package Manager: uv](https://img.shields.io/badge/package%20manager-uv-DE5FE9?style=flat&logo=astral&logoColor=white)](https://docs.astral.sh/uv/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.140-009688?style=flat&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
+[![PydanticAI](https://img.shields.io/badge/PydanticAI-2.33-E92063?style=flat&logo=pydantic&logoColor=white)](https://ai.pydantic.dev/)
+[![LangGraph](https://img.shields.io/badge/LangGraph-1.2-1C3C3C?style=flat&logo=langchain&logoColor=white)](https://langchain-ai.github.io/langgraph/)
+[![Streamlit](https://img.shields.io/badge/Streamlit-1.63-FF4B4B?style=flat&logo=streamlit&logoColor=white)](https://streamlit.io/)
+[![Oracle Cloud](https://img.shields.io/badge/OCI%20Object%20Storage-Always%20Free-F80000?style=flat&logo=oracle&logoColor=white)](https://www.oracle.com/cloud/free/)
+[![Tests](https://img.shields.io/badge/Tests-20%20passing-brightgreen?style=flat&logo=pytest&logoColor=white)](#-evidencias-técnicas-suite-de-integración)
+
+Solución integral y desacoplada orientada a comunidades de aprendizaje, ecosistemas de desarrolladores y plataformas SaaS para capturar actividad no estructurada (Discord, Slack, GitHub, foros y formularios) y convertirla sistemáticamente en activos de marketing estructurados (publicaciones de LinkedIn y resúmenes semanales) con **política estricta de Cero Hechos Inventados**, ciclo de curaduría humana y persistencia inmutable en **Oracle Cloud Infrastructure (OCI Always Free)**.
 
 ---
 
-## 🏗️ Arquitectura y Recorrido de Integración
+## 📑 Tabla de Contenidos
+
+- [🎯 Propósito y Propuesta de Valor](#-propósito-y-propuesta-de-valor)
+- [🏗️ Arquitectura y Flujo del Sistema](#️-arquitectura-y-flujo-del-sistema)
+- [🛠️ Stack Tecnológico](#️-stack-tecnológico)
+- [📁 Estructura del Proyecto](#-estructura-del-proyecto)
+- [⚡ Guía de Inicio Rápido (Quickstart)](#-guía-de-inicio-rápido-quickstart)
+- [📋 Evidencias Técnicas: Suite de Integración](#-evidencias-técnicas-suite-de-integración)
+- [📚 Documentación Detallada del MVP](#-documentación-detallada-del-mvp)
+
+---
+
+## 🎯 Propósito y Propuesta de Valor
+
+Las comunidades digitales generan diariamente un alto volumen de testimonios de éxito, dudas recurrentes y avances técnicos que suelen perderse en canales de chat efímeros. **CommunityLab** automatiza la captura y refinamiento de estas interacciones bajo cuatro principios fundamentales:
+
+1. **Cero Hechos Inventados y Trazabilidad Forzada:** Todo contenido generado (LinkedIn y resumen semanal) exige la asociación obligatoria y no vacía de citas directas a los mensajes originales (`source_ids`).
+2. **Validación y Aislamiento en Dos Capas:** La API de admisión valida la autenticidad y el sobre del lote; el pipeline local aísla registros incompletos o sin texto hacia auditoría en SQLite, sin tumbar el procesamiento del resto del lote.
+3. **Scoring de Relevancia Objetivo (0–6 puntos):** Evaluación semántica basada en tres dimensiones discretas (evidencia explícita, utilidad comunitaria y contexto) con justificación documentada (`motivo_seleccion`).
+4. **Persistencia Inmutable con Doble Confirmación:** Versionado estricto de revisiones (`revision-001.json`, `revision-002.json`) en OCI Object Storage Always Free, con verificación activa de lectura por software tras cada operación de guardado.
+
+---
+
+## 🏗️ Arquitectura y Flujo del Sistema
 <img width="1024" height="768" alt="White Minimalist Modern Recruitment Process Flowchart" src="https://github.com/user-attachments/assets/542a6504-f1e6-400a-a1a6-ed450d3602e7" />
 
+El sistema implementa una arquitectura desacoplada y orientada a eventos dividida en 5 capas especializadas:
+
+```mermaid
+flowchart LR
+    subgraph Fuentes["1. Fuentes"]
+        canales["Discord / Slack / GitHub"]
+        n8n["n8n Workflow Engine"]
+    end
+
+    subgraph Transporte["2. Ingesta y Transporte"]
+        api["FastAPI<br/>(X-Webhook-Secret)"]
+        raw[("data/raw/<br/>JSON Atómicos")]
+    end
+
+    subgraph Pipeline["3. Pipeline Local y Auditoría"]
+        validador["Validador por Registro<br/>(data_pipeline)"]
+        sqlite[("SQLite Local<br/>(Auditoría y Analítica)")]
+    end
+
+    subgraph Cognitivo["4. Agentes e Inferencia"]
+        langgraph["Orquestador<br/>(LangGraph)"]
+        pydantic_ai["Agentes Cognitivos<br/>(PydanticAI)"]
+        llm["LLM Multi-proveedor<br/>(OpenAI / Gemini / Claude)"]
+    end
+
+    subgraph Curaduria["5. Curaduría y Cloud"]
+        ui["Panel Streamlit<br/>(Curaduría Humana)"]
+        oci[("OCI Object Storage<br/>(Always Free Inmutable)")]
+    end
+
+    canales --> n8n
+    n8n -->|HTTP POST + request_id| api
+    api -->|Escritura atómica| raw
+    raw --> validador
+    validador -->|Registros inválidos / vacíos| sqlite
+    validador -->|InteraccionValidada| langgraph
+    langgraph <--> pydantic_ai
+    pydantic_ai <--> llm
+    langgraph -->|Borrador revision-001| oci
+    langgraph -->|Métricas y análisis| sqlite
+    sqlite --> ui
+    ui -->|Aprobación revision-002| oci
 ```
-[n8n / Webhook / Carga Manual]
-            │
-            ▼
-┌───────────────────────────────┐
-│     FastAPI Ingestion API     │ ──> Guarda atómicamente en `data/raw/`
-└───────────────────────────────┘
-            │
-            ▼
-┌───────────────────────────────┐
-│      Validador Local          │ ──> Aplica `InteraccionValidada`
-└───────────────┬───────────────┘
-                │
-        ┌───────┴───────┐
-        ▼               ▼
-┌───────────────┐ ┌──────────────────────────┐
-│   3 Válidos   │ │ 1 Rechazado (Sin Texto)  │
-│  Agentes LLM  │ │  Tabla Auditoría Local   │
-└───────┬───────┘ └──────────────────────────┘
-        │
-        ▼
-┌───────────────────────────────┐
-│     Generación de Activos     │ ──> LinkedIn + Resumen Semanal (`source_ids`)
-└───────────────┬───────────────┘
-                │
-        ┌───────┴────────────────────────┐
-        ▼                                ▼
-┌───────────────────────────────┐ ┌─────────────────────────────────┐
-│  Borrador `revision-001.json` │ │    Panel Streamlit (Curaduría)   │
-│   OCI Object Storage (Sync)   │ │  Aprobación -> `revision-002`   │
-└───────────────────────────────┘ └─────────────────────────────────┘
+### Recorrido Operativo de los Datos
+
+
+1. **Ingesta:** Los eventos de chat se capturan y normalizan vía n8n, enviando una petición HTTP autenticada a FastAPI. La API valida la firma compartida (`X-Webhook-Secret`), verifica idempotencia mediante hash SHA-256 y almacena atómicamente el lote en `data/raw/{run_id}.json`.
+2. **Validación:** El módulo `data_pipeline/validador.py` examina cada registro. Si un mensaje carece de texto, se desvía a la tabla de auditoría en SQLite; los registros válidos avanzan como `InteraccionValidada`.
+3. **Análisis Cognitivo y Ruteo:** El agente en PydanticAI evalúa sentimiento, temas y calcula la `PuntuacionRelevancia` (0–6). El router de LangGraph determina la temática editorial (`Logro`, `Duda`, `Dificultad`).
+4. **Generación Dual de Activos:** Se generan simultáneamente la publicación para LinkedIn y el boletín semanal vinculando los `source_ids`.
+5. **Curaduría y Sincronización:** Se genera el borrador inicial (`revision-001.json`) y se sincroniza en OCI Object Storage Always Free. El curador revisa, edita o aprueba en Streamlit, creando una versión inmutable (`revision-002.json`).
+
+---
+
+## 🛠️ Stack Tecnológico
+
+| Capa / Dominio | Tecnología | Versión | Propósito en el Proyecto |
+| :--- | :--- | :--- | :--- |
+| **Runtime & Lockfile** | Python / uv | `3.11.*` / `>=0.5` | Entorno de ejecución reproducible con `uv.lock` determinista en Windows, macOS y Linux. |
+| **Ingesta & Transporte** | FastAPI / Uvicorn | `0.140.*` / `>=0.30` | Endpoint perimetral de admisión, verificación de webhook y persistencia atómica. |
+| **Automatización Externa** | n8n | Standalone / Docker | Normalización de eventos desde plataformas de chat hacia el formato del sobre canónico. |
+| **Validación de Esquemas** | Pydantic v2 | `>=2.10` | Validación estricta de contratos en dos capas (`IngestionLote`, `InteraccionValidada`). |
+| **Agentes Cognitivos** | PydanticAI | `>=2.33,<3.0` | Inferencia estructurada determinista, clasificación temática y cálculo de relevancia. |
+| **Orquestación de Flujo** | LangGraph | `>=1.2,<1.3` | Máquina de estados desacoplada, políticas de reintento y bifurcaciones condicionales. |
+| **Curaduría & Visualización** | Streamlit | `>=1.63,<1.64` | Panel interactivo para revisión humana, edición de borradores y visualización analítica. |
+| **Persistencia Local** | SQLite | `3.*` | Almacenamiento relacional para auditoría de descartes y métricas comunitarias. |
+| **Persistencia Cloud** | OCI Object Storage | `>=2.185` (`oci` SDK) | Repositorio de la verdad inmutable Always Free con verificación activa de lectura. |
+| **Observabilidad** | structlog | `>=26.1,<27` | Logging estructurado JSON contextual con sanitización automática de datos sensibles (PII). |
+
+---
+
+## 📁 Estructura del Proyecto
+
+```text
+Communitylab-G10-Grupo_34-/
+├── .env.example              # Plantilla de variables de entorno requeridas
+├── pyproject.toml            # Definición formal del proyecto, dependencias y pytest
+├── uv.lock                   # Lockfile congelado para instalación determinista
+├── esquemas.py               # Contratos canónicos Pydantic (Única fuente de verdad)
+├── api/                      # Capa de transporte e ingesta HTTP (FastAPI)
+│   ├── main.py               # Endpoints perimetrales y control de idempotencia
+│   └── dependencies.py       # Validación de secretos compartidos de webhooks
+├── data_pipeline/            # Procesamiento y validación local registro por registro
+│   ├── __init__.py
+│   └── validador.py          # Separador de registros válidos y descarte a auditoría
+├── ai_modules/               # Módulos de inteligencia artificial con PydanticAI
+│   ├── cognitive_analyzer.py # Análisis de sentimiento, temas y scoring 0-6
+│   ├── copy_generator.py     # Generadores de LinkedIn y boletín con source_ids
+│   └── prompts/              # Directrices editoriales y prompts versionados
+├── orchestration/            # Coordinación del grafo de ejecución con LangGraph
+│   └── pipeline_runner.py    # Máquina de estados y derivación condicional
+├── storage/                  # Persistencia dual (SQLite y OCI Object Storage)
+│   ├── oci_client.py         # Cliente SDK OCI con verificación activa de lectura
+│   └── local_db.py           # Gestor de base de datos relacional SQLite
+├── ui/                       # Interfaz gráfica de curaduría para el gestor de comunidad
+│   └── app.py                # Aplicación Streamlit para revisión y aprobación
+├── data/
+│   ├── raw/                  # JSONs de ingesta atómica y lotes de prueba sintéticos
+│   └── communitylab.db       # Base de datos SQLite local generada en ejecución
+├── docs/                     # Documentación técnica exhaustiva del MVP
+│   ├── arquitectura_de_communitylab.md  # Documento maestro de arquitectura
+│   ├── SETUP.md              # Guía de configuración avanzada con uv
+│   └── CONTRIBUTING.md       # Convenciones Git, ramas y gobernanza de esquemas
+└── tests/                    # Suite de pruebas unitarias y de integración
+    ├── test_oci_client.py    # Pruebas del cliente OCI (unitarias y mocking)
+    └── test_primera_prueba.py# Criterios de aceptación: 4 recibidos -> 3 válidos, 1 rechazado
+```
 ```
 
 ## 📦 Estado actual del código
@@ -56,19 +164,87 @@ Solución automatizada orientada a comunidades de aprendizaje, ecosistemas de de
 | Cliente OCI Object Storage real | `storage/oci_client.py` | ⏳ Pendiente (`ui/storage_demo.py` simula solo en disco local mientras tanto) |
 | API de ingesta (FastAPI) | `api/` | ⏳ Pendiente |
 
-## 📋 Evidencias Técnicas: Primera Prueba de Integración
+  ```
+  ---
 
-### 1. Dataset de Prueba Sintético (`data/raw/lote_prueba_01.json`)
-Contiene los 4 escenarios canónicos exigidos por la arquitectura:
-- **`msg_001` (Logro / Testimonio)**: Éxito de despliegue en OCI (`Usuario_Alfa`).
-- **`msg_002` (Logro / Avance)**: Completitud de esquemas Pydantic (`Usuario_Beta`).
-- **`msg_003` (Duda técnica)**: Consulta de configuración de webhook en n8n (`Usuario_Gamma`).
-- **`msg_004` (Inválido)**: Registro con `texto: ""` para comprobar el aislamiento de fallos (`Usuario_Delta`).
+## ⚡ Guía de Inicio Rápido (Quickstart)
 
-### 2. Resultados de la suite de pruebas
+### 1. Prerrequisitos
+
+El proyecto requiere **Python 3.11** y **[uv](https://docs.astral.sh/uv/)**. Si aún no dispones de `uv`:
+
+- **Windows (PowerShell):**
+  ```powershell
+  powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+  ```
+
+- **macOS / Linux:**
+  ```bash
+  curl -LsSf https://astral.sh/uv/install.sh | sh
+  ```
+
+### 2. Clonar el Repositorio y Sincronizar Entorno
+
+```bash
+git clone https://github.com/No-Country-simulation/Communitylab-G10-Grupo_34-.git
+cd Communitylab-G10-Grupo_34-
+
+# uv descarga Python 3.11 (si es necesario), crea el .venv e instala las dependencias exactas:
+uv sync
+```
+
+### 3. Configurar Variables de Entorno
+
+Copia la plantilla `.env.example` a un archivo local `.env`:
+
+```bash
+cp .env.example .env
+```
+
+Configura tus credenciales en `.env`:
+- `COMMUNITYLAB_WEBHOOK_SECRET`: Token para autorizar llamadas desde n8n.
+- `OCI_CONFIG_FILE` / `OCI_KEY_FILE`: Rutas a las credenciales de Oracle Cloud Infrastructure.
+- `OCI_NAMESPACE` / `OCI_BUCKET_NAME`: Parámetros del bucket Always Free de OCI.
+- `OPENAI_API_KEY` / `GEMINI_API_KEY` / `ANTHROPIC_API_KEY`: Llaves de acceso a proveedores de LLM.
+
+### 4. Ejecutar la Suite de Pruebas
+
+Para validar la correcta configuración del entorno, contratos y lógica de negocio:
+
+```bash
+uv run pytest
+```
+
+### 5. Levantar los Servicios Locales
+
+Para iniciar la API de admisión (FastAPI):
+```bash
+uv run uvicorn api.main:app --reload --port 8000
+```
+
+Para abrir el panel de curaduría de contenidos (Streamlit):
+```bash
+uv run streamlit run ui/app.py
+```
+
+---
+
+## 📋 Evidencias Técnicas: Suite de Integración
+
+### Dataset de Prueba Sintético (`data/raw/lote_prueba_01.json`)
+
+Diseñado para someter a prueba los cuatro escenarios canónicos exigidos por la arquitectura:
+- **`msg_001` (Logro / Testimonio):** Éxito de despliegue en OCI (`Usuario_Alfa`).
+- **`msg_002` (Logro / Avance):** Completitud de esquemas en Pydantic (`Usuario_Beta`).
+- **`msg_003` (Duda Técnica):** Consulta de configuración de webhooks en n8n (`Usuario_Gamma`).
+- **`msg_004` (Registro Defectuoso):** Mensaje con `texto: ""` para comprobar el aislamiento de fallos (`Usuario_Delta`).
+
+### Resultados de Ejecución Automática
+
+
 Comando ejecutado:
 ```bash
-python -m pytest tests/ -v
+uv run pytest
 ```
 ### 4. Validación del Adaptador con el Formato Oficial de la Hackatón
 Para certificar que el sistema no falle ante los datos planos provistos por el jurado evaluador, se implementó un test de integración que valida la transformación de la frontera ("Inbound") y la segregación de registros corruptos en tiempo de ejecución.
@@ -93,56 +269,34 @@ tests/test_primera_prueba.py::test_validacion_lote_prueba_01 PASSED
 tests/test_primera_prueba.py::test_contrato_paquete_distribucion_generado PASSED
 ```
 
-### 3. Criterios de Aceptación Verificados
+```
 
-| Criterio | Resultado Esperado | Estado |
-| :--- | :--- | :---: |
-| **Transporte y Validación** | 4 recibidos, 3 válidos a IA, 1 rechazado (`msg_004`) aislado en auditoría sin tumbar el lote | ✅ Superado |
-| **Trazabilidad estricta** | Activos generados enlazan a `source_ids` sin inventar hechos | ✅ Superado |
-| **Contrato Canónico** | Estructura 100% compatible con `PaqueteSalida` y `EvidenciaAlmacenamientoOCI` | ✅ Superado |
-| **Flujo de curaduría end-to-end** | Carga → análisis → edición/aprobación → guardado local verificado, con validación de campos e invalidación al editar contenido aprobado | ✅ Superado (`tests/test_frontend.py`) |
+Salida de la suite:
+```text
+============================= test session starts =============================
+platform win32 -- Python 3.11.9, pytest-9.1.1, pluggy-1.6.0
+rootdir: Communitylab-G10-Grupo_34-
+configfile: pyproject.toml
+testpaths: tests
+plugins: anyio-4.15.1, langsmith-0.14.2, logfire-5.1.1, platformdirs-4.12.2
+collected 21 items / 1 deselected / 20 selected
 
----
+tests\test_oci_client.py ..................                              [ 90%]
+tests\test_primera_prueba.py ..                                          [100%]
 
-## 🚀 Guía de Instalación y Ejecución Local
+====================== 20 passed, 1 deselected in 2.69s =======================
+```
+### Matriz de Criterios de Aceptación Superados
 
-El equipo estandarizó **Python 3.11** y **[uv](https://docs.astral.sh/uv/)** como gestor de entorno/paquetes.
+| Criterio Arquitectónico | Resultado Esperado | Evidencia Técnica | Estado |
+| :--- | :--- | :--- | :---: |
+| **Transporte e Ingesta** | Admisión sin caída ante registros vacíos | Sobre `IngestionLote` procesa el lote de 4 elementos sin descartarlo | ✅ Superado |
+| **Aislamiento en Dos Capas** | 3 válidos a IA y 1 rechazado a auditoría | `data_pipeline/validador.py` deriva `msg_004` a auditoría y emite 3 `InteraccionValidada` | ✅ Superado |
+| **Trazabilidad Factual** | Cero hechos inventados en copys generados | `PostLinkedIn` y `ResumenSemanal` contienen `source_ids` verificables (`msg_001`, `msg_002`, `msg_003`) | ✅ Superado |
+| **Contrato Canónico** | Cumplimiento estricto del paquete consolidado | Estructura 100% compatible con `PaqueteSalida` y `EvidenciaAlmacenamientoOCI` | ✅ Superado |
+| **Persistencia Cloud Segura** | Resiliencia en operaciones con el SDK de OCI | 18 pruebas unitarias con mock y verificación activa de lectura | ✅ Superado |
 
-1. **Clonar el repositorio y entrar al directorio:**
-   ```bash
-   git clone https://github.com/No-Country-simulation/Communitylab-G10-Grupo_34-.git
-   cd Communitylab-G10-Grupo_34-
-   ```
 
-2. **Crear el entorno virtual con Python 3.11 (uv lo descarga si no lo tienes):**
-   ```bash
-   uv python install 3.11
-   uv venv --python 3.11
-   # Activar en Windows:
-   .venv\Scripts\activate
-   ```
-
-3. **Instalar dependencias:**
-   ```bash
-   uv pip install -r requirements.txt
-   ```
-
-4. **Configurar variables de entorno:**
-   ```bash
-   cp .env.example .env
-   # Completar credenciales de OCI y del LLM en .env (nunca subir este archivo)
-   ```
-
-5. **Ejecutar la suite de pruebas:**
-   ```bash
-   python -m pytest tests/ -v
-   ```
-
-6. **Levantar el panel de curaduría (Streamlit):**
-   ```bash
-   python -m streamlit run ui/app.py
-   ```
-   Se abre en `http://localhost:8501`. Incluye un lote de ejemplo (`data/raw/lote_prueba_01.json`, botón "Probar con datos de ejemplo") para recorrer el flujo completo sin depender de canales reales.
 
 ---
 
@@ -189,3 +343,18 @@ Más capturas (incluida la pantalla inicial vacía y el estado post-aprobación)
 - Detalle adicional y notas de verificación en [`ui/README.md`](ui/README.md).
 
 **Pendiente antes de conectar con servicios reales:** reemplazar `ui/mock_pipeline.py` por los módulos reales de `ai_modules/`, y `ui/storage_demo.py` por `storage/oci_client.py`, sin cambiar los contratos de `esquemas.py` sin acuerdo previo del equipo.
+
+---
+## 📚 Documentación Detallada del MVP
+
+Para profundizar en el diseño, contratos canónicos y normas de trabajo del equipo, consulta los documentos de referencia:
+
+- 🏛️ **[Arquitectura de CommunityLab](docs/arquitectura_de_communitylab.md):** Especificación completa de servicios, límites del sistema, flujos de datos, contratos JSON detallados, observabilidad con `structlog` y estrategia de persistencia en OCI Always Free.
+- ⚙️ **[Guía de Configuración y Entorno](docs/SETUP.md):** Manual detallado para la instalación y uso de `uv`, generación del lockfile y administración de dependencias.
+- 🤝 **[Guía de Contribución y Gobernanza](docs/CONTRIBUTING.md):** Estándares de ramas Git (`feat/<modulo>-<detalle>`), formato de commits, políticas de Pull Requests y regla estricta de modificación de `esquemas.py`.
+- 📐 **[Contratos Canónicos de Datos](esquemas.py):** Modelos Pydantic v2 centralizados que definen la única fuente de verdad para la ingesta, análisis cognitivo y paquetes de salida.
+
+---
+
+### 👥 Equipo 34 — Hackathon ONE G10 / NoCountry
+*Desarrollado para el Demo Day de 27 de octubre 2026.*

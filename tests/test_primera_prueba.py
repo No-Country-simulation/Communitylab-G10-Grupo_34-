@@ -27,7 +27,7 @@ from esquemas import (
     ResumenSemanal,
     EvidenciaAlmacenamientoOCI,
 )
-from validador import validar_lote_crudo
+from data_pipeline.validador import validar_lote_crudo
 
 
 def test_validacion_lote_prueba_01():
