@@ -43,9 +43,11 @@ Solución automatizada orientada a comunidades de aprendizaje, ecosistemas de de
 
 ## 📦 Estado actual del código
 
+
 | Componente | Contrato / módulo | Estado |
 | :--- | :--- | :---: |
 | Contratos de datos (Pydantic) | `esquemas.py` (`IngestionLote`, `AnalisisCognitivo`, `PaqueteSalida`) | ✅ Implementado y acordado por el equipo |
+| Capa de Admisión y Adaptador de Frontera | `validador.py` (`adaptar_payload_oficial`) | ✅ Implementado (Homologa JSON plano del jurado) |
 | Validación local en 2 capas | `validador.py` | ✅ Implementado |
 | Panel de curaduría (Streamlit) | `ui/app.py`, `ui/styles.css`, `ui/mock_pipeline.py`, `ui/storage_demo.py` | ✅ Implementado (análisis y OCI aún simulados, ver sección abajo) |
 | Análisis cognitivo real (LLM) | `ai_modules/cognitive_analyzer.py` | ⏳ Pendiente |
@@ -67,6 +69,20 @@ Contiene los 4 escenarios canónicos exigidos por la arquitectura:
 Comando ejecutado:
 ```bash
 python -m pytest tests/ -v
+```
+### 4. Validación del Adaptador con el Formato Oficial de la Hackatón
+Para certificar que el sistema no falle ante los datos planos provistos por el jurado evaluador, se implementó un test de integración que valida la transformación de la frontera ("Inbound") y la segregación de registros corruptos en tiempo de ejecución.
+
+Comando ejecutado:
+```bash
+uv run pytest test_adaptador.py -v
+```
+
+**Salida de consola obtenida (100% PASSED):**
+```text
+test_adaptador.py::test_adaptador_y_validacion_payload_oficial PASSED                                                            [100%]
+
+========================================================== 1 passed in 0.17s ===========================================================
 ```
 
 **Salida de consola obtenida (4 pruebas, todas en verde):**
