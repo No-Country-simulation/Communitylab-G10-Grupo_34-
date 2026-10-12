@@ -137,8 +137,75 @@ def test_construir_paquete_salida():
 def test_rechaza_source_id_inexistente():
     import pytest
 
-    # Reutiliza el escenario válido de la prueba anterior
-    # extrayendo su preparación a una función auxiliar.
-    # Por ahora, esta prueba se completará cuando separemos
-    # la construcción del escenario de prueba.
-    assert True
+    from generador import construir_paquete_salida
+
+    from esquemas import (
+        AnalisisCognitivo,
+        ResumenComunidad,
+        MetadatosEjecucion,
+        ActivosGenerados,
+        PostLinkedIn,
+        ResumenSemanal,
+    )
+
+    analisis = AnalisisCognitivo(
+        run_id="run-prueba-002",
+        request_id="req-prueba-001",
+        resumen_comunidad=ResumenComunidad(
+            total_interacciones_procesadas=1,
+            registros_validos=1,
+            registros_rechazados=0,
+            sentimiento_predominante="Positivo",
+            distribucion_sentimiento={"Positivo": 1},
+            temas_principales=["Python"],
+        ),
+        mensajes_analizados=[
+            MensajeAnalizado(
+                source_id="msg_001",
+                sentimiento="Positivo",
+                categoria_enrutamiento="Logro",
+                regla_aplicada="Logro técnico documentado",
+                temas=["Python"],
+                entidades_relevantes=["Python"],
+                puntuacion_relevancia=PuntuacionRelevancia(
+                    evidencia_explicita=2,
+                    utilidad_comunitaria=2,
+                    claridad_contexto=2,
+                    total=6,
+                ),
+                motivo_seleccion="Ejemplo válido para probar la trazabilidad.",
+                requiere_soporte=False,
+                apto_para_publicacion=True,
+            )
+        ],
+    )
+
+    # Este activo referencia un mensaje que no existe en el análisis.
+    activos = ActivosGenerados(
+        post_linkedin=PostLinkedIn(
+            titulo="Logro destacado: Python",
+            cuerpo="La comunidad documentó un avance técnico en Python.",
+            hashtags=["#Python"],
+            source_ids=["msg_inexistente"],
+        ),
+        resumen_semanal=ResumenSemanal(
+            seccion="Temas destacados",
+            titular="Avances de la comunidad",
+            resumen="Se registraron avances técnicos durante la semana.",
+            source_ids=["msg_inexistente"],
+        ),
+        casos_no_publicables=[],
+    )
+
+    metadatos = MetadatosEjecucion(
+        modelo="prueba_sintetica",
+        prompt_version="mvp-sin-llm",
+        latencia_ms=0,
+        tokens_totales=0,
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="source_id sin respaldo",
+    ):
+        construir_paquete_salida(analisis, activos, metadatos)
