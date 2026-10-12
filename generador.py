@@ -2,7 +2,12 @@ from esquemas import (
     PostLinkedIn,
     ResumenSemanal,
     CasoNoPublicable,
-    ActivosGenerados)
+    ActivosGenerados,
+    AnalisisCognitivo,
+    PaqueteSalida,
+    MetadatosEjecucion,
+    EvidenciaAlmacenamientoOCI,
+)
 
 
 def buscar_interaccion_por_source_id(source_id, interacciones):
@@ -129,4 +134,47 @@ def generar_activos(interacciones, analisis_lista):
         post_linkedin=post_linkedin,
         resumen_semanal=resumen_semanal,
         casos_no_publicables=casos_no_publicables
+    )
+
+def construir_paquete_salida(
+    analisis_cognitivo,
+    activos,
+    metadatos_ejecucion,
+):
+    # Obtener los IDs de los análisis recibidos.
+    source_ids_validos = {
+        mensaje.source_id
+        for mensaje in analisis_cognitivo.mensajes_analizados
+    }
+
+    # Comprobar la trazabilidad de los activos.
+    source_ids_activos = (
+        activos.post_linkedin.source_ids
+        + activos.resumen_semanal.source_ids
+        + [
+            caso.source_id
+            for caso in activos.casos_no_publicables
+        ]
+    )
+
+    if not set(source_ids_activos).issubset(source_ids_validos):
+        raise ValueError(
+            "Hay activos con source_id sin respaldo en el análisis"
+        )
+
+    # Construir el paquete final validado.
+    return PaqueteSalida(
+        run_id=analisis_cognitivo.run_id,
+        request_id=analisis_cognitivo.request_id,
+        metadatos_ejecucion=metadatos_ejecucion,
+        analisis_resumido=analisis_cognitivo.resumen_comunidad,
+        activos=activos,
+        almacenamiento_oci=EvidenciaAlmacenamientoOCI(
+            ruta_objeto=(
+                f"activos/periodo-no-asignado/"
+                f"{analisis_cognitivo.run_id}/revision-1.json"
+            ),
+            status_almacenamiento="no_iniciado",
+            comprobacion_lectura=False,
+        ),
     )
