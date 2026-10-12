@@ -116,6 +116,8 @@ def test_construir_paquete_salida():
 
     # La revisión empieza pendiente, nunca aprobada automáticamente.
     assert paquete.revision.estado == "pendiente"
+    assert paquete.revision.revisor is None
+    assert paquete.revision.fecha_decision is None
 
     # No afirmar que se almacenó en OCI.
     assert paquete.almacenamiento_oci.status_almacenamiento == "no_iniciado"
