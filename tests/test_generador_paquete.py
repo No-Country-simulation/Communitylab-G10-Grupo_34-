@@ -118,6 +118,10 @@ def test_construir_paquete_salida():
     assert paquete.revision.estado == "pendiente"
     assert paquete.revision.revisor is None
     assert paquete.revision.fecha_decision is None
+    datos_paquete = paquete.model_dump(mode="json")
+
+    assert datos_paquete["revision"]["estado"] == "pendiente"
+    assert datos_paquete["revision"]["revisor"] is None
 
     # No afirmar que se almacenó en OCI.
     assert paquete.almacenamiento_oci.status_almacenamiento == "no_iniciado"
